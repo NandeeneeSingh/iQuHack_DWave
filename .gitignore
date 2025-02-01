@@ -9,3 +9,18 @@ initial_map.html
 solution_map.html
 assets/theme.css
 *.DS_Store
+
+# Ignore virtual environments
+venv/
+env/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+.DS_Store
+
+# Ignore logs and cache files
+*.log
+*.sqlite3
+*.db
