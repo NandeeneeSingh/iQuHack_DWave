@@ -19,6 +19,8 @@ __pycache__/
 *.pyd
 .Python
 .DS_Store
+lib/
+bin/
 
 # Ignore logs and cache files
 *.log
