@@ -26,6 +26,10 @@ from dash import MATCH, DiskcacheManager, callback_context, ctx
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
+
+
+
+
 from app_configs import APP_TITLE, DEBUG, THEME_COLOR, THEME_COLOR_SECONDARY
 from dash_html import SAMPLER_TYPES, create_table, set_html
 from map import (
@@ -459,10 +463,59 @@ def _get_parameter_hash(**states) -> str:
         raise TypeError("unhashable problem parameter value") from e
 
 
+def solve_cvrp(demand, sites, number_of_vehicles, vehicle_capacity, time_limit=10):
+    from dwave.optimization.generators import capacitated_vehicle_routing
+    from dwave.system import LeapHybridNLSampler
+
+    # Formulate the model
+    model = capacitated_vehicle_routing(
+        demand=demand,
+        number_of_vehicles=number_of_vehicles,
+        vehicle_capacity=vehicle_capacity,
+        locations_x=[x for x, y in sites],
+        locations_y=[y for x, y in sites])
+    
+    # Instantiate the solver
+    sampler = LeapHybridNLSampler()
+    print("Estimated min time limit:", sampler.estimated_min_time_limit(model))
+    
+    # Submit the model
+    results = sampler.sample(model, time_limit=time_limit)
+    
+    # Process the results
+    num_samples = model.states.size()
+    route, = model.iter_decisions()
+    route1, route2 = route.iter_successors()
+    
+    solutions = []
+    for i in range(min(3, num_samples)):
+        obj_val = int(model.objective.state(i))
+        r1 = route1.state(i)
+        r2 = route2.state(i)
+        feasible = all(sym.state(i) for sym in model.iter_constraints())
+        solutions.append({
+            'objective': obj_val,
+            'route1': r1,
+            'route2': r2,
+            'feasible': feasible
+        })
+        print(f"Objective value {obj_val} for \n"
+              f"\t Route 1: {r1} \t Route 2: {r2} \n"
+              f"\t Feasible: {feasible}")
+    return solutions
+
+
+
+
 # import the html code and sets it in the app
 # creates the visual layout and app (see `dash_html.py`)
 set_html(app)
 
 # Run the server
 if __name__ == "__main__":
+    demand = [0, 34, 12, 65, 10, 43, 27, 55, 61, 22]
+    sites = [(15, 38), (23, -19), (44, 62), (3, 12), (-56, -21),
+             (-53, 2), (33, 63), (14, -33), (42, 41), (13, -62)]
+    solve_cvrp(demand, sites, number_of_vehicles=2, vehicle_capacity=200, time_limit=10)
+
     app.run_server(debug=DEBUG)
